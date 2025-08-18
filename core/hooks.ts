@@ -18,11 +18,11 @@ function getValidWatchKeys(watchKey: string | string[], method: string): string[
 
 function resetCallback(watchKey: string[] | string, uuid: string) {
   const key = getSharedKey(watchKey, uuid)
-  const customPromise = shared[key]
-  if (customPromise) {
-    customPromise.reject()
-    delete shared[key]
+  const current = shared[key];
+  if (current && typeof current.reject === 'function') {
+    current.reject(new Error(`Cancelled: ${key}`));
   }
+  delete shared[key];
 }
 
 function createHookPromise(watchKey: string[] | string, uuid: string, method: string) {
@@ -48,11 +48,18 @@ function createHookPromise(watchKey: string[] | string, uuid: string, method: st
   const iterable = _watchKey.map((i) => {
     const promiseKey = watchConfigs[i].key
     return promiseMap.get(promiseKey)!.status == PromiseStatus.FULFILLED
-      ? Promise.resolve
+      ? Promise.resolve()
       : promiseCache.get(promiseKey)
   })
 
+  const current = shared[sharedKey]; // 记录本轮条目
   const promise = Promise.race([Promise.all(iterable), shared[sharedKey].promise])
+    .finally(() => {
+      if (shared[sharedKey] === current) { // 身份校验，避免误删后续新条目
+        delete shared[sharedKey];
+      }
+    });
+  
   return promise
 }
 

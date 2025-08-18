@@ -22,7 +22,7 @@ export declare const customHooks: CustomHooks;
 
 declare type DefaultWatchConfig = {
     key: string;
-    type?: "default";
+    type?: 'default';
     onUpdate?: (val: any) => boolean;
 };
 
@@ -48,7 +48,7 @@ export declare const onCustomShow: CustomHook;
 
 declare type PiniaWatchConfig = {
     key: string;
-    type: "pinia";
+    type: 'pinia';
     store: any;
     onUpdate?: (val: any) => boolean;
 };
@@ -56,6 +56,7 @@ declare type PiniaWatchConfig = {
 declare type PromiseEntry = {
     status: PromiseStatus;
     resolve: Function;
+    type?: 'pinia' | 'default';
     onUpdate?: (val: any) => boolean;
 };
 
