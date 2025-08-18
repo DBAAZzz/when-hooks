@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "lib": ["es6", "dom", "es2017"],
+    "lib": ["es6", "dom", "es2017", "es2018"],
     "types": ["@dcloudio/types"],
     "allowJs": false, // 允许编译JavaScript文件
     "module": "esnext",

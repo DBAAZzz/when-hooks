@@ -1,6 +1,6 @@
 {
   "name": "custom-hooks-plus",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "适用于uniapp、Vue3的自定义生命周期钩子",
   "main": "dist/index.js",
   "scripts": {
