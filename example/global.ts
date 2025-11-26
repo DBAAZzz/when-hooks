@@ -1,4 +1,4 @@
-import { createProxy } from "../core"
+import { createProxy } from "../src/core/init"
 
 interface GlobalData {
   token: string

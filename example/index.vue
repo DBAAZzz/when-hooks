@@ -14,7 +14,7 @@
 import { ref } from 'vue'
 import { set } from './global'
 import { useUserStore } from './stores/user'
-import { init, onCustomMounted } from '../core'
+import { init, onCustomMounted } from '../src'
 
 init({
   Login: {
