@@ -4,78 +4,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-这是一个为 Vue3 和 UniApp 开发的自定义生命周期钩子库。该库允许开发者在特定的状态变化组合下执行代码，例如在 `Username 不为空` + `onShow 生命周期` 时触发钩子。
+when-hooks 是一个条件生命周期钩子库:在「生命周期到达」+「自定义状态满足」两个条件同时成立时执行代码,例如 `Login 状态满足` + `onShow 生命周期` 时触发 `onShowWhen(['Login'], cb)`。
+
+仓库为 pnpm workspace monorepo:
+
+- **packages/core**(`@when-hooks/core`)— 框架无关内核,纯 JS 零依赖
+- **packages/uni**(`@when-hooks/uni`)— uniapp / Vue3 适配层,依赖 core(`workspace:^`)
 
 ## 常用命令
 
-### 构建与打包
 ```bash
-# 完整构建流程
-pnpm run build
-
-# 构建 bundle
-pnpm run build-bundle
-
-# 生成类型定义
-pnpm run build-types
-
-# TypeScript 编译
-pnpm run ts-build
-```
-
-### 测试
-```bash
-# 运行测试
-pnpm test
+pnpm build          # 构建全部包(unbuild)
+pnpm test           # vitest watch 模式
+pnpm test:run       # 运行全部测试一次
+pnpm typecheck      # 全部包 tsc --noEmit
+pnpm check-publish  # publint 校验发布配置
 ```
 
 ## 核心架构
 
-### 主要模块结构
+### core 包(契约与算法)
 
-- **core/init.ts** - `CustomHooks` 类，核心状态管理系统
-  - 管理 `promiseCache`、`promiseMap` 和 `watchConfigs`
-  - 提供 `createProxy()` 方法创建响应式代理对象
-  - 实现 `init()` 方法注册监听配置
+- **src/types.ts** — 两个核心契约:
+  - `ConditionSource`:`{ get(): boolean, subscribe(onChange): unsubscribe }`,条件源
+  - `LifecycleWindow`:`{ onOpen(cb), onClose(cb) }`,生命周期窗口
+- **src/when-all.ts** — `whenAll(sources, signal?)`:等待全部条件满足,本质是 watch 一个合成布尔,支持 AbortSignal 取消
+- **src/lifecycle-window.ts** — `runInWindow(window, sources, cb)`:窗口开启时等待条件、执行回调;窗口关闭取消本轮等待。sources 支持惰性解析(函数形式),允许 init 晚于钩子注册
+- **src/abort.ts** — `createAbortController` 兜底实现(部分小程序 JS 引擎无原生 AbortController)
 
-- **core/hooks.ts** - 自定义钩子实现
-  - 提供 `onCustomShow`、`onCustomLoad`、`onCustomMounted` 等钩子
-  - 通过 `createHookPromise()` 管理异步状态
+### uni 包(Vue/uniapp 适配)
 
-- **core/rewrite.ts** - 生命周期重写层
-  - 包装原生 Vue/UniApp 生命周期钩子
+- **src/core/condition-source.ts** — `fromGetter(getter, predicate?)`:用 `watch(isMet, ..., { flush: 'sync' })` 把响应式 getter 翻译成 `ConditionSource`
+- **src/core/windows.ts** — 六个生命周期窗口工厂(onShow 开启/onHide+onUnload 关闭等)
+- **src/core/registry.ts** — `WatchRegistry`:`createProxy` 即 Vue `reactive()`;`init` 把 `WatchConfig`(default/pinia 两种)翻译成条件源存入 Map,root 在 getter 内惰性解析
+- **src/hooks/global.ts** — `onLaunchWhen` / `onLoadWhen` / `onShowWhen` / `onCreatedWhen` / `onMountedWhen` / `onReadyWhen`,签名 `(keys, cb)`;旧名 `onCustomXxx(cb, keys)` 保留为 `@deprecated` 别名
+- **src/hooks/local.ts** — `onLoadWhenLocal` 等局部钩子,签名 `(options, cb)`,直接监听组件内 ref/reactive;旧名 `onLocalCustomXxx(cb, options)` 为 `@deprecated` 别名
 
-### 关键设计模式
+### 构建与发布
 
-1. **Promise-based 状态管理**
-   - 使用 `PromiseStatus.PENDING/FULFILLED` 跟踪状态变化
-   - 通过 `Promise.race([Promise.all(iterable), sharedPromise])` 实现条件触发
+- 每包一个 **build.config.ts**(unbuild),产物 `dist/index.mjs` + `dist/index.d.mts`
+- package.json 开发态指向 `src/index.ts`,`publishConfig` 切换到 dist;uni 包的 vue/uni-app/core 均为 external 不打入产物
 
-2. **Proxy 响应式系统**
-   - `createProxy()` 创建响应式对象，监听属性变化
-   - `track()` 方法处理嵌套对象的扁平化监听
+### 测试
 
-3. **类型系统**
-   - `WatchConfig` 支持 default 和 pinia 两种类型
-   - `onUpdate` 函数提供自定义更新条件
+统一 vitest(根 vitest.workspace.ts 聚合 `packages/*/vitest.config.ts`):
 
-### 构建配置
-
-- **rollup.config.mjs** - 使用 Rollup 打包为 ESM 格式
-- **api-extractor.json** - 使用 Microsoft API Extractor 生成统一的类型定义
-- **tsconfig.types.json** - 专门用于类型生成的 TypeScript 配置
-
-### 测试策略
-
-使用 Vitest + Vue Test Utils 进行组件测试，测试场景包括：
-- Pinia store 状态变化触发钩子
-- Global 对象属性变化触发钩子  
-- 嵌套对象属性变化监听
-- 多条件组合触发
+- core:node 环境纯单元测试(test/when-all.test.ts、test/lifecycle-window.test.ts)
+- uni:happy-dom + @vue/test-utils 组件测试(test/index.test.ts,挂载 example/index.vue)
+- 注意:example/global.ts 的 globalData 是模块级单例,测试 beforeEach 需调用 `resetGlobalData()`
 
 ## 开发注意事项
 
-- 该库设计为双模式支持：Vue3 全局状态和 Pinia store 状态
-- 扁平化处理确保深层对象属性变化也能被正确监听
-- Promise 机制保证钩子只在所有监听条件满足时才执行
-- 支持 onUpdate 自定义条件判断函数
+- 条件即响应式 getter:嵌套属性赋值(`globalData.userInfo.name = 'x'`)天然可监听,无需手动扁平化
+- 窗口关闭通过 AbortSignal 取消等待,取消异常(`isAbortError`)与用户回调异常严格区分,后者不吞
+- 设计文档在 docs/ 目录:架构重构方案、命名方案、多包工程组织方案、测试方案

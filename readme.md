@@ -1,175 +1,201 @@
-# custom-hooks-plus
+# when-hooks
 
-- [custom-hooks-plus](#custom-hooks-plus)
-  - [custom-hooks-plus 的作用](#custom-hooks-plus-的作用)
-  - [下载和使用](#下载和使用)
-    - [下载](#下载)
-    - [createProxy 的作用](#createproxy-的作用)
-    - [init 的作用](#init-的作用)
-  - [可用的自定义钩子](#可用的自定义钩子)
-  - [联系作者](#联系作者)
-
-## custom-hooks-plus 的作用
-
-`custom-hooks-plus` 提供了一系列自定义钩子（Hooks）来帮助开发者在**特定的时刻**执行代码。
-
-这个特定的时刻为 `vue3 或 uniapp 中的生命周期 hooks` + `自定义的变量或者状态的变化`来执行代码
-
-如下面这个自定义钩子的触发时机为 `Username 的值不为空` + `uniapp 的 onShow 生命周期`。
+**条件生命周期钩子** — 在「生命周期到达」与「自定义状态满足」两个条件同时成立时执行回调。
 
 ```ts
-onCustomShow(() => {
-  console.log('onShow+username');
-}, 'Username');
+onShowWhen(['Login'], () => {
+  console.log('已登录且页面 onShow，才会执行这里')
+})
 ```
 
-这使得开发者能够创建更灵活的响应式逻辑，尤其是在需要根据应用状态的变化来执行特定操作时。
+适用于 **uniapp + Vue 3**，基于响应式订阅实现条件等待，无轮询、无 setTimeout。
 
-`custom-hooks-plus` 主要导出了以下几种方法：
-
-- createProxy
-- init
-- 一系列自定义钩子
-
-## 下载和使用
-
-### 下载
+## 安装
 
 ```bash
-npm i custom-hooks-plus
+npm i @when-hooks/uni
 ```
 
-### createProxy 的作用
+## 快速开始
 
-createProxy 的作用就是监听传入对象的变化。
+### 1. 创建响应式全局状态
 
-```js
-// global.ts 文件
-import { createProxy } from 'custom-hooks-plus'
+`createProxy` 将对象包装为响应式代理（底层即 Vue `reactive`），嵌套属性变更也可被钩子监听。
+
+```ts
+// global.ts
+import { createProxy } from '@when-hooks/uni'
 
 interface GlobalData {
   token: string
-  userInfo: number
+  userInfo: { name: string } | null
 }
 
-export const globalData = createProxy({
+export const globalData = createProxy<GlobalData>({
   token: '',
-  userInfo: {
-    name: ''
-  }
+  userInfo: null,
 })
-
-export function set<K extends keyof GlobalData>(key: K, val: GlobalData[K]) {
-  globalData[key] = val
-}
-
-export function get<K extends keyof GlobalData>(key: K): GlobalData[K] {
-  return globalData[key]
-}
 ```
 
-### init 的作用
+### 2. 注册条件监听
 
-init 方法的定义为：
+`init` 声明每个条件名对应的状态路径及满足判断。
 
 ```ts
-declare type PiniaWatchConfig = {
-  key: string;
-  type: 'pinia';
-  store: any;
-  onUpdate?: (val: any) => boolean;
-};
-
-declare type PromiseEntry = {
-  status: PromiseStatus;
-  resolve: Function;
-  type?: 'pinia' | 'default';
-  onUpdate?: (val: any) => boolean;
-};
-
-declare type WatchConfig = PiniaWatchConfig | DefaultWatchConfig;
-
-declare type WatchConfigCollection = {
-  [key: string]: WatchConfig;
-};
-
-/**
- *
- * @param watchObject 监听的键
- * @param target 传入的store
- * @returns
- */
-export declare function init(watchObject: WatchConfigCollection): void;
-```
-
-具体方法为：
-
-```js
-// App.vue 中使用
-import { init } from 'custom-hooks-plus';
-import { useCounterStore } from '@/store/index';
+// App.vue
+import { init } from '@when-hooks/uni'
+import { useCounterStore } from '@/store/index'
 
 init({
   Login: {
-    key: 'token', // 监听global文件中globalData的token的变化
-    onUpdate: (val) => {
-      return !!val;
-    },
+    key: 'token',
+    onUpdate: (val) => !!val,          // 自定义条件：token 非空字符串即为"已登录"
   },
   UserInfo: {
-    key: 'userInfo', // 监听global文件中globalData的userinfo的变化
+    key: 'userInfo',                    // 默认条件：值真值即为满足
   },
   Name: {
-    key: 'userInfo.name', // 监听global文件中globalData的userinfo.name的变化
+    key: 'userInfo.name',               // 支持嵌套路径
   },
   Count: {
-    key: 'counter', // 监听 useCounterStore 中 state 的 counter的变化
+    key: 'counter',
     type: 'pinia',
-    store: useCounterStore(), // type传入pinia类型需要传入store实例
-    onUpdate: (val) => {
-      return val === 2;
-    }, // 更新条件为 val 等于 2
+    store: useCounterStore(),
+    onUpdate: (val) => val === 2,       // Pinia store 示例
   },
-});
+})
 ```
 
-使用自定义生命周期钩子
+### 3. 在页面中使用钩子
 
-```ts
-// 页面中使用
+条件键在前、回调在后。传入多个 key 时，所有条件均满足且生命周期到达后才执行回调。
+
+```vue
 <script setup lang="ts">
-import { onCustomLoad, onCustomShow } from 'custom-hooks-plus';
+import { onLoadWhen, onShowWhen } from '@when-hooks/uni'
 
-onCustomLoad((options) => {
-  console.log('LoginUserInfo钩子执行-onCustomLoad1', options);
-  console.log('globalData的token和userInfo都被修改了才会触发');
-}, ['Login', 'UserInfo']);
+onLoadWhen(['Login', 'UserInfo'], (options) => {
+  console.log('onLoad + Login + UserInfo 全部就绪', options)
+})
 
-onCustomShow(() => {
-  console.log('LoginUserInfo钩子执行-onCustomShow2');
-  console.log('globalData的token和userInfo都被修改了才会触发');
-}, ['Login', 'UserInfo']);
-
-onCustomShow(() => {
-  console.log('UserInfoLogin钩子执行-onCustomShow3');
-  console.log('globalData的token被修改了才会触发');
-}, ['Login']);
-
+onShowWhen(['Login'], () => {
+  console.log('每次 onShow 只要 Login 已满足就会执行')
+})
 </script>
 ```
 
-## 可用的自定义钩子
+页面离开（`onUnload` / `onHide`）时自动取消本轮等待，下次进入重新开始。
 
-| 支持的自定义钩子 | 执行时机                   |
-| ---------------- | -------------------------- |
-| onCustomLaunch   | 对应 uniapp 的 onLaunch    |
-| onCustomLoad     | 对应 uniapp 的 onLoad      |
-| onCustomCreated  | 渲染时机为 Vue2 的 created |
-| onCustomShow     | 对应 uniapp 的 onShow      |
-| onCustomMounted  | 对应 uniapp 的 onMounted   |
-| onCustomReady    | 对应 uniapp 的 onReady     |
+## API 参考
 
+### 全局状态钩子
 
-## 联系作者
+需配合 `init` 注册的全局 / Pinia 状态使用，签名为 `(keys: string[], cb: Function)`：
 
-![图 0](images/2024-12-20%2000-35-25%2032efc6bee36652fea47fe4dc284d68eaaa9b9cab09b0d497e28ea2e1adb585e4.png)  
+| 钩子 | 生命周期窗口 |
+| --- | --- |
+| `onLaunchWhen` | `onLaunch` 开启 → `onHide` 关闭 |
+| `onLoadWhen` | `onLoad` 开启 → `onUnload` 关闭 |
+| `onShowWhen` | `onShow` 开启 → `onHide` / `onUnload` 关闭 |
+| `onCreatedWhen` | `setup` 同步阶段开启（对应 Vue 2 created）→ 卸载关闭 |
+| `onMountedWhen` | `onMounted` 开启 → `onUnmounted` 关闭 |
+| `onReadyWhen` | `onReady` 开启 → `onUnload` 关闭 |
+
+### 局部状态钩子
+
+不依赖 `init`，直接监听组件内 `ref` / `reactive` / `computed`，签名为 `(options, cb)`：
+
+```ts
+import { ref } from 'vue'
+import { onShowWhenLocal } from '@when-hooks/uni'
+
+const userInfo = ref<{ name: string } | null>(null)
+
+onShowWhenLocal({ watchSource: userInfo }, () => {
+  console.log('onShow 已触发，且 userInfo 不为空')
+})
+```
+
+可用钩子：`onLoadWhenLocal`、`onShowWhenLocal`、`onMountedWhenLocal`、`onReadyWhenLocal`。
+
+#### 局部钩子配置项
+
+| 选项 | 类型 | 说明 |
+| --- | --- | --- |
+| `watchSource` | `Ref \| ComputedRef \| () => any` | 被监听的值或 getter |
+| `condition` | `(val: any) => boolean` | 自定义满足条件，默认真值判断 |
+| `triggerOnChange` | `boolean` | 条件满足后，值再次变化是否重复触发 |
+| `immediate` | `boolean` | 就绪时是否立即执行（不等生命周期） |
+
+## 从 custom-hooks-plus 迁移
+
+旧 API 仍可使用（标记为 `@deprecated`），建议尽快迁移。改名同时统一参数顺序为**条件前置、回调在后**：
+
+| 旧 API（回调前置） | 新 API（条件前置） |
+| --- | --- |
+| `onCustomLaunch(cb, keys)` | `onLaunchWhen(keys, cb)` |
+| `onCustomLoad(cb, keys)` | `onLoadWhen(keys, cb)` |
+| `onCustomShow(cb, keys)` | `onShowWhen(keys, cb)` |
+| `onCustomCreated(cb, keys)` | `onCreatedWhen(keys, cb)` |
+| `onCustomMounted(cb, keys)` | `onMountedWhen(keys, cb)` |
+| `onCustomReady(cb, keys)` | `onReadyWhen(keys, cb)` |
+| `onLocalCustomLoad(cb, options)` | `onLoadWhenLocal(options, cb)` |
+| `onLocalCustomShow(cb, options)` | `onShowWhenLocal(options, cb)` |
+| `onLocalCustomMounted(cb, options)` | `onMountedWhenLocal(options, cb)` |
+| `onLocalCustomReady(cb, options)` | `onReadyWhenLocal(options, cb)` |
+
+`init`、`createProxy` 名称不变；`proxyData` 已弃用，请使用 `createProxy`。
+
+## 设计原理
+
+### 核心思想
+
+页面开发中的常见痛点：某个操作需要**两个条件同时成立**——例如"用户已登录"且"页面 onShow 了"。传统做法是手动维护标志位 + watch + if 判断，条件一多极易出错。
+
+**when-hooks** 把这个模式抽象为 `whenAll(conditions) ∩ lifecycleWindow`：
+
+```text
+条件源（ConditionSource）  ──┐
+                             ├── whenAll ──→ 执行回调
+生命周期窗口（LifecycleWindow）──┘
+```
+
+### 架构分层
+
+本仓库为 **pnpm workspace monorepo**，遵循 core / adapter 分层：
+
+| 包 | 说明 |
+| --- | --- |
+| `@when-hooks/core` | 框架无关内核 —— `ConditionSource` 契约、`whenAll`、`LifecycleWindow`、取消语义。**纯 JS，零依赖** |
+| `@when-hooks/uni` | uniapp / Vue 3 适配层 —— 基于 `reactive` / `watch` 将响应式状态翻译为条件源，uni 生命周期翻译为窗口 |
+
+内核面向两个最小契约编程，与框架解耦：
+
+- **`ConditionSource`**：`{ get(): boolean; subscribe(onChange): () => void }` — 可订阅的布尔条件源，各框架适配器负责把自身状态翻译为此契约
+- **`LifecycleWindow`**：`{ onOpen(cb); onClose(cb) }` — 生命周期窗口，适配器将 `onShow` / `useDidShow` 等接入
+
+窗口关闭时通过 `AbortSignal` 取消条件等待，"窗口关闭取消"与"用户回调异常"严格区分，回调中的错误不会被静默吞掉。
+
+### 典型应用场景
+
+1. **登录态网关**：`onShowWhen(['Login'], cb)` — 每次页面可见且已登录才执行业务逻辑
+2. **多依赖就绪**：`onLoadWhen(['Login', 'UserInfo', 'Permissions'], cb)` — 页面加载且三个前置数据全部到位后初始化
+3. **Pinia 状态联动**：监听 Pinia store 中的计算态（如"计数器等于 2"），结合生命周期触发副作用
+4. **局部组件条件**：`onMountedWhenLocal({ watchSource: elementRef }, cb)` — DOM 元素挂载且引用就绪后操作
+
+更多设计决策与架构细节见 [docs/](docs/)。
+
+## 开发
+
+```bash
+pnpm install
+
+pnpm build          # 构建全部包（unbuild）
+pnpm test:run       # 运行全部测试（core 单元测试 + uni 组件测试）
+pnpm typecheck      # 全部包类型检查
+pnpm check-publish  # 发布前校验
+```
+
+## 许可证
+
+ISC

@@ -1,63 +1,28 @@
 {
-  "name": "custom-hooks-plus",
-  "version": "1.0.8",
-  "description": "适用于uniapp、Vue3的自定义生命周期钩子",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "rimraf dist && run-s build-bundle build-types",
-    "build-bundle": "rollup -c ./rollup.config.mjs --bundleConfigAsCjs",
-    "build-types": "run-s build-temp build-api-types",
-    "build-temp": "rimraf temp && tsc --emitDeclarationOnly --outDir temp -p ./tsconfig.types.json",
-    "build-api-types": "api-extractor run && rimraf temp",
-    "ts-build": "tsc -p .",
-    "test": "vitest"
-  },
-  "types": "dist/index.d.ts",
+  "name": "when-hooks",
+  "private": true,
+  "description": "条件生命周期钩子库",
   "author": "DBAAZzz",
   "license": "ISC",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "check-publish": "pnpm -r exec publint",
+    "release": "pnpm typecheck && pnpm test:run && pnpm build && pnpm check-publish && pnpm -r publish --access public",
+    "release:dry": "pnpm build && pnpm -r publish --dry-run --no-git-checks"
+  },
   "devDependencies": {
-    "@babel/core": "^7.20.5",
-    "@babel/plugin-transform-runtime": "^7.19.6",
-    "@babel/preset-env": "^7.20.2",
-    "@dcloudio/types": "^3.4.8",
-    "@dcloudio/uni-app": "3.0.0-3081220230817001",
-    "@microsoft/api-extractor": "^7.43.1",
-    "@rollup/plugin-babel": "^6.0.3",
-    "@rollup/plugin-commonjs": "^23.0.3",
-    "@rollup/plugin-node-resolve": "^15.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@types/jest": "^29.2.3",
-    "@vitejs/plugin-vue": "^5.2.0",
-    "@vue/test-utils": "^2.4.6",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
-    "happy-dom": "^15.11.6",
-    "jest": "^29.3.1",
-    "npm-run-all": "^4.1.5",
-    "pinia": "^2.2.6",
     "prettier": "^3.6.2",
-    "rimraf": "^3.0.2",
-    "rollup": "^3.5.1",
-    "rollup-plugin-typescript2": "^0.36.0",
-    "tslib": "^2.4.1",
-    "typescript": "^4.9.3",
-    "vite": "^5.4.11",
-    "vitest": "^2.1.5",
-    "vue": "^3.4.24"
+    "publint": "^0.2.12",
+    "typescript": "^5.6.3",
+    "unbuild": "^3.0.1",
+    "vitest": "^2.1.5"
   },
-  "peerDependencies": {
-    "@dcloudio/uni-app": "3.0.0-3081220230817001",
-    "vue": "^3.4.24"
-  },
-  "files": [
-    "dist"
-  ],
-  "keywords": [
-    "vue3",
-    "uniapp",
-    "hooks"
-  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/DBAAZzz/custom-hooks-plus"
+    "url": "git+https://github.com/DBAAZzz/when-hooks.git"
   }
 }
