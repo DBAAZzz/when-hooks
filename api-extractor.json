@@ -1,5 +1,5 @@
 {
-  "mainEntryPointFilePath": "<projectFolder>/temp/core/index.d.ts",
+  "mainEntryPointFilePath": "<projectFolder>/temp/src/index.d.ts",
   "compiler": {
     "tsconfigFilePath": "<projectFolder>/tsconfig.json"
   },

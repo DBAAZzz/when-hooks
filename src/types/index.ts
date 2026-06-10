@@ -9,11 +9,11 @@ export interface LaunchShowOption {
   /**
    * 打开小程序的路径
    */
-  path: string;
+  path: string
   /**
    * 打开小程序的query
    */
-  query: AnyObject;
+  query: AnyObject
   /**
    * 打开小程序的场景值
    * - 1001: 发现栏小程序主入口，「最近使用」列表（基础库2.2.4版本起包含「我的小程序」列表）
@@ -86,15 +86,15 @@ export interface LaunchShowOption {
    * - 1103: 发现栏小程序主入口，「我的小程序」列表（基础库2.2.4版本起废弃）
    * - 1104: 微信聊天主界面下拉，「我的小程序」栏（基础库2.2.4版本起废弃）
    */
-  scene: number;
+  scene: number
   /**
    * 打开小程序的场景值
    */
-  shareTicket: string;
+  shareTicket: string
   /**
    * 当场景为由从另一个小程序或公众号或App打开时，返回此字段
    */
-  referrerInfo?: ReferrerInfo;
+  referrerInfo?: ReferrerInfo
 }
 
 interface ReferrerInfo {
@@ -109,11 +109,11 @@ interface ReferrerInfo {
    * - 1038（从另一个小程序返回）：来源小程序 appId
    * - 1043（公众号模板消息）：来源公众号 appId
    */
-  appId: string;
+  appId: string
   /**
    * 来源小程序传过来的数据，scene=1037或1038时支持
    */
-  extraData?: any;
+  extraData?: any
 }
 
 type PiniaWatchConfig = {
@@ -135,7 +135,7 @@ export enum PromiseStatus {
   /** 加载状态 */
   PENDING = 'pending',
   /** 已完成 */
-  FULFILLED = 'fulfilled'
+  FULFILLED = 'fulfilled',
 }
 
 export type WatchConfigCollection = {
@@ -144,13 +144,20 @@ export type WatchConfigCollection = {
 
 export type PromiseEntry = {
   status: PromiseStatus
-  resolve: Function,
+  resolve: Function
   type?: 'pinia' | 'default'
   onUpdate?: (val: any) => boolean
 }
 
 export type PromiseMapValue = PromiseEntry & Partial<WatchConfig>
 
-export type HookFunction = (beforeCb: () => void, asyncCb: (options?: any) => Promise<void>, afterCb: () => void) => void;
+export type HookFunction = (
+  beforeCb: () => void,
+  asyncCb: (options?: any) => Promise<void>,
+  afterCb: () => void,
+) => void
 
-export type CustomHook = (cb: (options?: any) => void, watchKey: string[] | string) => void;
+export type CustomHook = (cb: (options?: any) => void, watchKey: string[] | string) => void
+
+// 导出局部钩子相关类型
+export * from './local-hooks'
