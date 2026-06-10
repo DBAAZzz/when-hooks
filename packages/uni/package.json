@@ -1,0 +1,55 @@
+{
+  "name": "@when-hooks/uni",
+  "version": "0.1.0",
+  "description": "适用于 uniapp、Vue3 的条件生命周期钩子",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "unbuild"
+  },
+  "dependencies": {
+    "@when-hooks/core": "workspace:^"
+  },
+  "peerDependencies": {
+    "@dcloudio/uni-app": "3.0.0-3081220230817001",
+    "vue": "^3.4.24"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/uni-app": "3.0.0-3081220230817001",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^15.11.6",
+    "pinia": "^2.2.6",
+    "vue": "^3.4.24"
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "DBAAZzz",
+  "license": "ISC",
+  "keywords": [
+    "vue3",
+    "uniapp",
+    "hooks"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DBAAZzz/when-hooks.git",
+    "directory": "packages/uni"
+  }
+}
