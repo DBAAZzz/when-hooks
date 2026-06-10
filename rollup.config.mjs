@@ -6,7 +6,7 @@ import terser from '@rollup/plugin-terser';
 
 module.exports = [
   {
-    input: ['./core/index.ts'],
+    input: ['./src/index.ts'],
     output: {
       dir: './dist',
       format: 'esm',
