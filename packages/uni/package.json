@@ -1,6 +1,6 @@
 {
   "name": "@when-hooks/uni",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "适用于 uniapp、Vue3 的条件生命周期钩子",
   "type": "module",
   "main": "./src/index.ts",

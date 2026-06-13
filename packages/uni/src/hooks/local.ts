@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { isRef, ref, watch, type WatchStopHandle } from 'vue'
 import { onShow, onHide, onLoad, onUnload, onReady } from '@dcloudio/uni-app'
 import { onMounted, onUnmounted } from 'vue'
 import {
@@ -26,8 +26,9 @@ function createLocalWhenHook(
     const isPageActive = ref(false)
     const hasExecuted = ref(false)
 
-    let stopWatch: (() => void) | null = null // watch 清理函数
+    let stopWatch: WatchStopHandle | null = null // watch 清理函数
     let lifecycleOptions: any = null // 存储生命周期参数
+    let hasOpened = false
 
     /**
      * 检查单个值是否满足条件
@@ -51,7 +52,10 @@ function createLocalWhenHook(
       if (typeof source === 'function') {
         return source()
       }
-      return source.value
+      if (isRef(source)) {
+        return source.value
+      }
+      return source
     }
 
     /**
@@ -75,8 +79,8 @@ function createLocalWhenHook(
     /**
      * 执行回调函数（带条件检查和防重复逻辑）
      */
-    const executeCallback = (callbackOptions?: any) => {
-      if (!isPageActive.value) {
+    const executeCallback = (callbackOptions?: any, requireActive = true) => {
+      if (requireActive && !isPageActive.value) {
         return
       }
 
@@ -92,26 +96,21 @@ function createLocalWhenHook(
       }
     }
 
-    // 生命周期钩子触发
-    lifecycleHook((options?: any) => {
-      lifecycleOptions = options // 保存生命周期参数
-      isPageActive.value = true
+    const ensureWatch = () => {
+      if (!triggerOnChange || stopWatch) return
 
-      // 如果启用了 triggerOnChange 且 immediate，避免重复执行
-      // 让 watch 的 immediate 来处理首次执行
-      if (!(triggerOnChange && immediate)) {
-        executeCallback(options)
-      }
-    })
-
-    // 监听变量变化
-    if (triggerOnChange) {
       stopWatch = watch(
         watchSource,
         () => {
           if (isPageActive.value) {
-            hasExecuted.value = false // 允许重复触发
-            executeCallback(lifecycleOptions) // 传递生命周期参数
+            hasExecuted.value = false // 允许 active 窗口内的变化重复触发
+            executeCallback(lifecycleOptions)
+            return
+          }
+
+          // immediate 只允许首次生命周期打开前抢跑;关闭后的等待仍交还给生命周期窗口。
+          if (immediate && !hasOpened) {
+            executeCallback(lifecycleOptions, false)
           }
         },
         {
@@ -121,13 +120,25 @@ function createLocalWhenHook(
       )
     }
 
+    ensureWatch()
+
+    // 生命周期钩子触发
+    lifecycleHook((options?: any) => {
+      lifecycleOptions = options // 保存生命周期参数
+      hasOpened = true
+      isPageActive.value = true
+      ensureWatch()
+
+      executeCallback(options)
+    })
+
     // 重置钩子：清理状态和停止监听
     resetHooks.forEach((resetHook) => {
       resetHook(() => {
         isPageActive.value = false
         hasExecuted.value = false
+        lifecycleOptions = null
 
-        // 停止 watch 监听，防止内存泄漏
         if (stopWatch) {
           stopWatch()
           stopWatch = null

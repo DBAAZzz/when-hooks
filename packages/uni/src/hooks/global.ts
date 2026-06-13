@@ -17,17 +17,19 @@ import { WhenHook, CustomHook } from '../types'
 function resolveSources(watchKey: string | string[], method: string): ConditionSource[] | null {
   const keys = Array.isArray(watchKey) ? watchKey : [watchKey]
   const sources: ConditionSource[] = []
+  let hasMissingKey = false
 
   keys.forEach((key) => {
     const source = registry.getSource(key)
     if (source) {
       sources.push(source)
     } else {
+      hasMissingKey = true
       console.error(`Method: ${method}, Error: 监听的值【${key}】未注册！！！请检查init方法`)
     }
   })
 
-  return sources.length > 0 ? sources : null
+  return sources.length > 0 && !hasMissingKey ? sources : null
 }
 
 /**
